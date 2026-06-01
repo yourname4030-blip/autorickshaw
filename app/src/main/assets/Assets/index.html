@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Neon Highway Racer - Lambo Edition</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a1a; overflow: hidden; font-family: Arial; }
+        canvas { display: block; margin: 0 auto; }
+        #menu {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); text-align: center;
+            color: #00ffff; z-index: 10;
+        }
+        #menu h1 { font-size: 28px; text-shadow: 0 0 10px #00ffff; margin-bottom: 20px; }
+        #startBtn {
+            padding: 15px 30px; font-size: 18px; background: #00ffff;
+            border: none; border-radius: 8px; color: #000; font-weight: bold;
+            box-shadow: 0 0 20px #00ffff; cursor: pointer;
+        }
+        #score {
+            position: absolute; top: 20px; left: 20px; color: #00ffff;
+            font-size: 20px; font-weight: bold; text-shadow: 0 0 5px #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <h1>🏎️ LAMBORGHINI AVENTADOR</h1>
+        <button id="startBtn">START RACE</button>
+    </div>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const startBtn = document.getElementById('startBtn');
+        const scoreEl = document.getElementById('score');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let gameRunning = false;
+        let score = 0;
+        let speed = 5;
+
+        const carImg = new Image();
+        carImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgNjAgMTAwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTUgMTVMMTUgODVMMjAgOTBMMjUgODVMMjUgMTVMMjAgMTBMMTUgMTVaIiBmaWxsPSIjRkY5MDAwIi8+CjxwYXRoIGQ9Ik0zNSAxNUwzNSA4NUw0MCA5MEw0NSA4NUw0NSAxNUw0MCAxMEwzNSAxNVoiIGZpbGw9IiNGRjkwMDAiLz4KPHA+dGggZD0iTTIwIDEwTDIwIDMwTDMwIDE1TDI1IDEwTDIwIDEwWiIgZmlsbD0iIzAwRkZGRiIvPgo8cGF0aCBkPSJNMzAgMTVMMzUgMTBMMzUgMzBMMzAgMzBMMzAgMTVaIiBmaWxsPSIjMDBGRkZGIi8+CjxwYXRoIGQ9Ik0xNSA0MEw0NSA0MEw0NSA2MEwxNSA2MEwxNSA0MFoiIGZpbGw9IiMwMDExMjIiLz4KPHA+dGggZD0iTTIwIDcwTDQwIDcwTDQwIDgwTDIwIDgwTDIwIDcwWiIgZmlsbD0iIzAwRkZGRiIgc3Ryb2tlPSIjMDBGRkZGIiBzdHJva2Utd2lkdGg9IjIiLz4KPC9zdmc+';
+
+        const player = {
+            x: canvas.width / 2 - 30,
+            y: canvas.height - 120,
+            width: 60,
+            height: 100,
+            speed: 8
+        };
+
+        let roadY = 0;
+        let obstacles = [];
+
+        function drawRoad() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([20, 20]);
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#00ffff';
+            roadY += speed;
+            if (roadY > 40) roadY = 0;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, roadY - 40);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.shadowBlur = 0;
+        }
+
+        function drawCar() {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ff9000';
+            ctx.drawImage(carImg, player.x, player.y, player.width, player.height);
+            ctx.shadowBlur = 0;
+        }
+
+        function spawnObstacle() {
+            if (Math.random() < 0.02) {
+                obstacles.push({
+                    x: Math.random() * (canvas.width - 50),
+                    y: -50,
+                    width: 50,
+                    height: 50
+                });
+            }
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = '#ff00ff';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff00ff';
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                obs.y += speed;
+            });
+            ctx.shadowBlur = 0;
+            obstacles = obstacles.filter(obs => obs.y < canvas.height);
+        }
+
+        function checkCollision() {
+            for (let obs of obstacles) {
+                if (player.x < obs.x + obs.width &&
+                    player.x + player.width > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.height > obs.y) {
+                    gameOver();
+                }
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            menu.style.display = 'block';
+            menu.innerHTML = `
+                <h1>GAME OVER</h1>
+                <p style="color:#fff; margin:10px 0;">Score: ${score}</p>
+                <button id="startBtn" onclick="startGame()">RESTART</button>
+            `;
+        }
+
+        function updateScore() {
+            score++;
+            scoreEl.textContent = `Score: ${score}`;
+            if (score % 500 === 0) speed += 0.5;
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawRoad();
+            drawCar();
+            spawnObstacle();
+            drawObstacles();
+            checkCollision();
+            updateScore();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameRunning = true;
+            score = 0;
+            speed = 5;
+            obstacles = [];
+            player.x = canvas.width / 2 - 30;
+            menu.style.display = 'none';
+            gameLoop();
+        }
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            let touch = e.touches[0];
+            player.x = touch.clientX - player.width / 2;
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+        });
+
+        startBtn.onclick = startGame;
+    <170 </script>
+171 <</body>
+172 <</html>
+</bod
+<
